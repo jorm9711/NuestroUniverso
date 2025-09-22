@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Mi Universo para Ti</title>
+  <style>
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      background: #000; 
+      font-family: 'Arial', sans-serif;
+    }
+    canvas { 
+      display: block; 
+      width: 100%; 
+      height: 100%;
+    }
+    #mensaje {
+      position: absolute;
+      top: 20px;
+      width: 100%;
+      text-align: center;
+      font-size: 28px;
+      font-weight: bold;
+      color: #ff9ee0;
+      text-shadow: 0 0 10px #ff65c6, 0 0 20px #ff65c6;
+      animation: brillo 3s infinite alternate;
+      z-index: 100;
+      pointer-events: none;
+    }
+    @keyframes brillo {
+      from { opacity: 0.7; }
+      to { opacity: 1; }
+    }
+    #loading {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: black;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 24px;
+      z-index: 1000;
+    }
+    #instructions {
+      position: absolute;
+      bottom: 20px;
+      left: 20px;
+      color: white;
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px;
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    .distance-indicator {
+      position: absolute;
+      top: 70px;
+      width: 100%;
+      text-align: center;
+      color: white;
+      font-size: 14px;
+      pointer-events: none;
+      opacity: 0.7;
+    }
+    .romantic-message {
+      position: absolute;
+      color: #ff9ee0;
+      font-size: 16px;
+      text-shadow: 0 0 5px #ff65c6;
+      opacity: 0;
+      transition: opacity 2s;
+      pointer-events: none;
+      text-align: center;
+      width: 200px;
+    }
+    .planet-message {
+      position: absolute;
+      color: white;
+      font-size: 12px;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 5px 10px;
+      border-radius: 10px;
+      opacity: 0;
+      transition: opacity 1s;
+      pointer-events: none;
+      text-align: center;
+      width: 140px;
+      transform: translateX(-50%);
+    }
+    .love-particle {
+      position: absolute;
+      font-size: 16px;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body>
+  <div id="mensaje">En este universo infinito... mi lugar favorito eres tú 💖</div>
+  <div class="distance-indicator" id="distanceIndicator">Distancia: Media</div>
+  <div id="loading">Cargando el universo...</div>
+  <div id="instructions">Usa la rueda del mouse para acercar/alejar • Haz clic y arrastra para rotar</div>
+
+  <!-- Importmap para usar módulos -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.0/examples/jsm/"
+    }
+  }
+  </script>
+
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // Ocultar loading cuando todo esté listo
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        document.getElementById('loading').style.display = 'none';
+        iniciarUniverso();
+      }, 3000);
+			
+			
+    });
+		
+		// 🌸 Flores y ramos amarillos, morados y azules
+function createFlowers(scene) {
+	
+  const bouquetGroup = new THREE.Group();
+
+  const flowerColors = [0xffd700, 0x9370db, 0x1e90ff]; // amarillo, morado, azul
+  const stemMaterial = new THREE.MeshStandardMaterial({
+    color: 0x228B22,
+    roughness: 0.7,
+    metalness: 0.1
+  });
+
+  // ----- función que crea UNA sola flor -----
+  function makeFlower(color) {
+    const flower = new THREE.Group();
+
+    // tallo
+    const stem = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.1, 0.2, 4, 8),
+      stemMaterial
+    );
+    stem.position.y = 2;
+    flower.add(stem);
+
+    // centro
+    const center = new THREE.Mesh(
+      new THREE.SphereGeometry(0.4, 16, 16),
+      new THREE.MeshStandardMaterial({ color: 0x444000, roughness: 0.5 })
+    );
+    center.position.y = 4;
+    flower.add(center);
+
+    // pétalos
+    const petalGeom = new THREE.SphereGeometry(0.7, 16, 16);
+    const petalMat = new THREE.MeshStandardMaterial({
+      color,
+      roughness: 0.4,
+      metalness: 0.2
+    });
+
+    const petals = 6;
+    for (let i = 0; i < petals; i++) {
+      const angle = (i / petals) * Math.PI * 2;
+      const radius = 1.0;
+      const petal = new THREE.Mesh(petalGeom, petalMat);
+      petal.position.set(Math.cos(angle) * radius, 4, Math.sin(angle) * radius);
+      petal.scale.set(0.5, 0.2, 0.5);
+      flower.add(petal);
+    }
+
+    return flower;
+  }
+
+  // ----- ahora creamos RAMOS -----
+  for (let r = 0; r < 5; r++) { // número de ramos
+    const ramo = new THREE.Group();
+    ramo.position.set(
+      (Math.random() - 2) * 40,
+      0,
+      (Math.random() - 2) * 40
+    );
+
+    // cada ramo tiene 5 a 8 flores juntas
+    const count = 5 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < count; i++) {
+      const color = flowerColors[Math.floor(Math.random() * flowerColors.length)];
+      const flower = makeFlower(color);
+      // colocación compacta dentro del ramo
+      flower.position.set(
+        (Math.random() - 0.5) * 4,
+        0,
+        (Math.random() - 0.5) * 4
+      );
+      ramo.add(flower);
+    }
+
+    bouquetGroup.add(ramo);
+  }
+
+  scene.add(bouquetGroup);
+  return bouquetGroup;
+}
+  
+
+    function iniciarUniverso() {
+			
+			
+    // ✅ PRIMERO creamos la escena
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 3000);
+    camera.position.set(0, 200, 500);
+
+    const renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: "high-performance"
+    });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x330033);
+    document.body.appendChild(renderer.domElement);
+
+    // ✅ DESPUÉS llamamos a las flores
+    
+
+    // ... (el resto de tu código sigue igual) ...
+}
+			
+      // Escena, cámara, render
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 3000);
+      camera.position.set(0, 200, 500);
+
+      const renderer = new THREE.WebGLRenderer({ 
+        antialias: true,
+        powerPreference: "high-performance"
+      });
+      
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x330033); // Fondo más brillante con tono púrpura
+      document.body.appendChild(renderer.domElement);
+
+      // Controles mejorados con límites para evitar temblores
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.minDistance = 50;
+      controls.maxDistance = 1200;
+      controls.screenSpacePanning = false;
+      controls.minPolarAngle = 0;
+      controls.maxPolarAngle = Math.PI;
+
+      // Función para limitar la cámara y evitar que salga de los límites
+      function limitarCamara() {
+        const maxDistance = 1200;
+        const minDistance = 50;
+        
+        if (camera.position.length() > maxDistance) {
+          camera.position.normalize().multiplyScalar(maxDistance);
+        }
+        
+        if (camera.position.length() < minDistance) {
+          camera.position.normalize().multiplyScalar(minDistance);
+        }
+        
+        controls.update();
+      }
+
+      // Luces mejoradas con más brillo y tonos rosas
+      const ambient = new THREE.AmbientLight(0xffffff, 1.0); // Luz ambiental con tono púrpura
+      scene.add(ambient);
+      
+      const pointLight = new THREE.PointLight(0xffbbff, 3, 1000); // Luz con tono rosa
+      pointLight.position.set(0, 0, 0);
+      scene.add(pointLight);
+      
+			createFlowers(scene);
+      // Luz direccional adicional para más brillo
+      const directionalLight = new THREE.DirectionalLight(0xffddff, 0.5);
+      directionalLight.position.set(1, 1, 1).normalize();
+      scene.add(directionalLight);
+
+      // Cargar texturas de planetas locales
+      const loader = new THREE.TextureLoader();
+      
+      const loadTexture = (path) => {
+        return loader.load(path, undefined, undefined, (error) => {
+          console.error(`Error cargando textura: ${path}`, error); // ERROR CORREGIDO
+        });
+      };
+
+      // Texturas de planetas locales - CORREGIDAS LAS RUTAS
+      const textures = {
+        sun: loadTexture("textures/8k_sun.jpg"),
+        earth: loadTexture("textures/8k_earth_nightmap.jpg"),
+        jupiter: loadTexture("textures/8k_jupiter.jpg"),
+        mars: loadTexture("textures/8k_mars.jpg"),
+        uranus: loadTexture("textures/2k_uranus.jpg"),
+        saturn: loadTexture("textures/8k_saturn.jpg"),
+        ring: loadTexture("textures/8k_saturn_ring_alpha.png")
+      };
+
+      // Esfera de límite del universo con más brillo
+      const createUniverseBoundary = () => {
+        const boundaryGeometry = new THREE.SphereGeometry(1400, 64, 64);
+        const boundaryMaterial = new THREE.MeshBasicMaterial({
+          color: 0x220033, // Color más brillante
+          side: THREE.BackSide,
+          transparent: true,
+          opacity: 0.8 // Más brillo
+        });
+        
+        const boundary = new THREE.Mesh(boundaryGeometry, boundaryMaterial);
+        scene.add(boundary);
+        
+        return boundary;
+      };
+
+      const universeBoundary = createUniverseBoundary();
+
+      // Fondo de estrellas mejorado con más estrellas y brillo
+      const createStarField = () => {
+        const starsGeometry = new THREE.BufferGeometry();
+        const starCount = 18000; // Más estrellas
+        const starPositions = new Float32Array(starCount * 3);
+        const starColors = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+        
+        const color = new THREE.Color();
+        
+        for (let i = 0; i < starCount; i++) {
+          const i3 = i * 3;
+          const radius = 800 + Math.random() * 600;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos((Math.random() * 2) - 1);
+          
+          starPositions[i3] = radius * Math.sin(phi) * Math.cos(theta);
+          starPositions[i3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+          starPositions[i3 + 2] = radius * Math.cos(phi);
+          
+          // Colores más brillantes con tonos rosas y púrpuras
+          const randomValue = Math.random();
+          if (randomValue < 0.5) {
+            color.setRGB(0.9, 0.9, 1.0); // Azul claro brillante
+          } else if (randomValue < 0.7) {
+            color.setRGB(1.0, 0.8, 0.9); // Rosa
+          } else if (randomValue < 0.85) {
+            color.setRGB(0.9, 0.7, 1.0); // Púrpura
+          } else {
+            color.setRGB(1.0, 1.0, 0.8); // Amarillo claro
+          }
+          
+          starColors[i3] = color.r;
+          starColors[i3 + 1] = color.g;
+          starColors[i3 + 2] = color.b;
+          
+          starSizes[i] = Math.random() * 2.0 + 0.5; // Estrellas más grandes
+        }
+        
+        starsGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starsGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+        starsGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+        
+        const starsMaterial = new THREE.PointsMaterial({
+          size: 2.5, // Aumentado tamaño
+          sizeAttenuation: true,
+          vertexColors: true,
+          transparent: true,
+          opacity: 1.0 // Más brillo
+        });
+        
+        const starField = new THREE.Points(starsGeometry, starsMaterial);
+        scene.add(starField);
+        
+        return starField;
+      };
+
+      const starField = createStarField();
+
+      // Constelación en forma de corazón con estrellas parpadeantes - más femenina
+      const createHeartConstellation = () => {
+        const heartGroup = new THREE.Group();
+        heartGroup.position.set(-300, 100, -200);
+        
+        // Crear puntos para formar un corazón
+        const heartPoints = [];
+        for (let t = 0; t < 2 * Math.PI; t += 0.08) { // Más puntos para un corazón más definido
+          const x = 16 * Math.pow(Math.sin(t), 3);
+          const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+          heartPoints.push(new THREE.Vector3(x * 2, y * 2, 0));
+        }
+        
+        // Crear estrellas en los puntos del corazón
+        const starsGeometry = new THREE.BufferGeometry();
+        const positions = [];
+        const colors = [];
+        const sizes = [];
+        const alphas = [];
+        
+        heartPoints.forEach(point => {
+          positions.push(point.x, point.y, point.z);
+          
+          // Colores rosas y púrpuras para un toque femenino
+          colors.push(1.0, 0.6, 0.9); // Rosa
+          colors.push(1.0, 0.6, 0.9); // Rosa
+          colors.push(1.0, 0.6, 0.9); // Rosa
+          
+          sizes.push(5 + Math.random() * 3); // Más grandes
+          alphas.push(Math.random());
+        });
+        
+        starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        starsGeometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+        starsGeometry.setAttribute('size', new THREE.Float32BufferAttribute(sizes, 1));
+        starsGeometry.setAttribute('alpha', new THREE.Float32BufferAttribute(alphas, 1));
+        
+        const heartMaterial = new THREE.PointsMaterial({
+          size: 6, // Más grandes
+          sizeAttenuation: true,
+          vertexColors: true,
+          transparent: true,
+					alphaTest: 0.1
+        });
+        
+        const heartStars = new THREE.Points(starsGeometry, heartMaterial);
+        heartGroup.add(heartStars);
+        
+        // Líneas conectando las estrellas - en rosa
+        const lineGeometry = new THREE.BufferGeometry();
+        lineGeometry.setFromPoints(heartPoints);
+        
+        const lineMaterial = new THREE.LineBasicMaterial({
+          color: 0xff66cc,
+          transparent: true,
+          opacity: 0.6 // Más brillo
+        });
+        
+        const heartLine = new THREE.Line(lineGeometry, lineMaterial);
+        heartGroup.add(heartLine);
+        
+        // Añadir partículas brillantes alrededor del corazón
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particlePositions = [];
+        const particleColors = [];
+        
+        for (let i = 0; i < 200; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const distance = 25 + Math.random() * 15;
+          const x = Math.cos(angle) * distance;
+          const y = Math.sin(angle) * distance;
+          const z = (Math.random() - 0.5) * 10;
+          
+          particlePositions.push(x, y, z);
+          
+          // Partículas en tonos rosas y púrpuras
+          if (Math.random() > 0.5) {
+            particleColors.push(1.0, 0.7, 0.9); // Rosa
+          } else {
+            particleColors.push(0.8, 0.6, 1.0); // Púrpura
+          }
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.Float32BufferAttribute(particlePositions, 3));
+        particlesGeometry.setAttribute('color', new THREE.Float32BufferAttribute(particleColors, 3));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+          size: 3,
+          sizeAttenuation: true,
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.8,
+					alphaTest: 0.1 
+        });
+        
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        heartGroup.add(particles);
+        
+        scene.add(heartGroup);
+        
+        return { group: heartGroup, stars: heartStars, points: heartPoints, alphas: alphas, particles: particles };
+      };
+
+      const heartConstellation = createHeartConstellation();
+
+      // Sol con efecto de brillo aumentado y tonos más cálidos
+      const createSun = () => {
+        const sunGeometry = new THREE.SphereGeometry(50, 64, 64);
+        const sunMaterial = new THREE.MeshBasicMaterial({
+          map: textures.sun,
+          emissive: 0xffcc00, // Tonos más dorados
+          emissiveIntensity: 1.0  // Más brillo
+        });
+        
+        const sun = new THREE.Mesh(sunGeometry, sunMaterial);
+        scene.add(sun);
+        
+        const coronaGeometry = new THREE.SphereGeometry(60, 32, 32); // Más grande
+        const coronaMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffaa88, // Color más cálido
+          transparent: true,
+          opacity: 0.25,  // Más brillo
+          side: THREE.BackSide
+        });
+        
+        const corona = new THREE.Mesh(coronaGeometry, coronaMaterial);
+        sun.add(corona);
+        
+        // Añadir destellos de luz
+        const flareGeometry = new THREE.SphereGeometry(5, 16, 16);
+        const flareMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.7
+        });
+        
+        for (let i = 0; i < 8; i++) {
+          const angle = (i / 8) * Math.PI * 2;
+          const distance = 60 + Math.random() * 20;
+          const flare = new THREE.Mesh(flareGeometry, flareMaterial);
+          flare.position.set(
+            Math.cos(angle) * distance,
+            Math.sin(angle) * distance,
+            (Math.random() - 0.5) * 20
+          );
+          sun.add(flare);
+        }
+        
+        return sun;
+      };
+
+      const sun = createSun();
+			
+			
+
+      // Función para crear planetas con texturas y más brillo
+      function crearPlaneta(texture, size, distance, speed, tilt = 0, colorOverride = null) {
+        const material = texture ?
+          new THREE.MeshStandardMaterial({ 
+            map: texture,
+            roughness: 0.4,  // Reducido para más brillo
+            metalness: 0.3,  // Aumentado para más reflectividad
+            emissive: colorOverride ? new THREE.Color(colorOverride).multiplyScalar(0.5) : new THREE.Color(0x555555),
+            emissiveIntensity: 0.1 // Más brillo
+          }) :
+          new THREE.MeshStandardMaterial({ 
+            color: colorOverride,
+            roughness: 0.6, // Más brillo
+            metalness: 0.2, // Más reflectivo
+            emissive: new THREE.Color(colorOverride).multiplyScalar(0.7),
+            emissiveIntensity: 0.4// Más brillo
+          });
+          
+        const planet = new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32), material);
+        const pivot = new THREE.Object3D();
+        pivot.add(planet);
+
+        planet.rotation.z = tilt;
+        planet.position.x = distance;
+
+        scene.add(pivot);
+        return { planet, pivot, speed: speed * 0.5 };
+      }
+
+      // Planetas del sistema solar con texturas - colores más vibrantes
+      const planetas = [
+        crearPlaneta(null, 8, 70, 0.015, 0.05, 0xaaaaaa), // Mercurio - más brillo
+        crearPlaneta(null, 10, 100, 0.012, 0.03, 0xffddbb), // Venus - más brillo, tono dorado
+        crearPlaneta(textures.earth, 12, 140, 0.01, 0.41, 0x333333), // Tierra
+        crearPlaneta(textures.mars, 9, 190, 0.008, 0.44, 0xff8888), // Marte - rojo más vibrante
+        crearPlaneta(textures.jupiter, 20, 280, 0.004, 0.05), // Júpiter
+        crearPlaneta(textures.saturn, 18, 380, 0.003, 0.47), // Saturno
+        crearPlaneta(textures.uranus, 14, 460, 0.002, 1.7, 0xaaccff), // Urano - azul más brillante
+        crearPlaneta(null, 13, 520, 0.001, 0.5, 0x5588ff) // Neptuno - azul más vibrante
+      ];
+
+      // Planetas románticos adicionales (tonos pastel femeninos)
+      const romanticPlanets = [];
+      const romanticMessages = [
+        "Eres la estrella de mi cielo 💫",
+        "Mi corazón late por ti 💗",
+        "Juntos somos constelación 💞",
+        "Eres mi destino cósmico 🌠",
+        "Tu amor ilumina mi universo ✨",
+        "Eres mi galaxia favorita 🌌",
+        "Nuestro amor es atemporal ⏳",
+        "Eres mi sol y mis estrellas ☀️",
+        "Contigo el universo tiene sentido 💖",
+        "Eres mi fenómeno celestial 🌙",
+        "Mi amor por ti es infinito ♾️",
+        "Eres mi paraíso estelar 🪐"
+      ];
+
+      // Crear planetas románticos con tonos pastel
+      for (let i = 0; i < 8; i++) { // Más planetas románticos
+        // Tonos pastel femeninos: rosa, lila, menta, lavanda, etc.
+        const colors = [0xffb6c1, 0xdda0dd, 0xb0e0e6, 0xe6e6fa, 0xffd700, 0x98fb98, 0xadd8e6, 0xf0e68c];
+        const color = colors[i % colors.length];
+        const size = 5 + Math.random() * 4;
+        const distance = 600 + Math.random() * 300;
+        const speed = 0.001 + Math.random() * 0.002;
+        
+        const planetData = crearPlaneta(null, size, distance, speed, Math.random() * 0.5, color);
+        
+        // Posicionar en diferentes ángulos
+        planetData.pivot.rotation.y = Math.random() * Math.PI * 2;
+        
+        // Añadir brillo a los planetas
+        const glowGeometry = new THREE.SphereGeometry(size * 1.5, 32, 32); // Más grande
+        const glowMaterial = new THREE.MeshBasicMaterial({
+          color: color,
+          transparent: true,
+          opacity: 0.4,  // Más brillo
+          side: THREE.BackSide
+        });
+        const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+        planetData.planet.add(glow);
+        
+        // Añadir anillos a algunos planetas
+        if (Math.random() > 0.7) {
+          const ringGeometry = new THREE.RingGeometry(size * 1.1, size * 1.4, 32);
+          const ringMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.6
+          });
+          const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+          ring.rotation.x = Math.PI / 2;
+          planetData.planet.add(ring);
+        }
+        
+        romanticPlanets.push({
+          ...planetData,
+          message: romanticMessages[i],
+          messageElement: null
+        });
+      }
+
+      // Crear elementos DOM para los mensajes de los planetas
+      romanticPlanets.forEach((planet, index) => {
+        const messageElement = document.createElement('div');
+        messageElement.className = 'planet-message';
+        messageElement.textContent = planet.message;
+        messageElement.style.fontSize = '14px';
+        messageElement.style.fontStyle = 'italic';
+        document.body.appendChild(messageElement);
+        romanticPlanets[index].messageElement = messageElement;
+      });
+
+      // Anillo de Saturno mejorado
+      const ringGeometry = new THREE.RingGeometry(22, 30, 64);
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        map: textures.ring,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.9  // Más brillo
+      });
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+      ring.rotation.x = Math.PI / 2;
+      planetas[5].planet.add(ring);
+
+      // Quásar mejorado con tonos rosas y púrpuras
+      const createQuasar = () => {
+        const quasarGroup = new THREE.Group();
+        quasarGroup.position.set(600, 200, -300);
+        
+        // Núcleo del quásar
+        const quasarGeometry = new THREE.SphereGeometry(20, 32, 32);
+        const quasarMaterial = new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          emissive: 0xffccff, // Tono rosa
+          emissiveIntensity: 1.2  // Más brillo
+        });
+        
+        const quasar = new THREE.Mesh(quasarGeometry, quasarMaterial);
+        quasarGroup.add(quasar);
+        
+        // Disco de acreción con tonos púrpuras
+        const accretionGeometry = new THREE.RingGeometry(22, 45, 64);
+        const accretionMaterial = new THREE.MeshBasicMaterial({
+          color: 0xcc88ff, // Púrpura
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.9  // Más brillo
+        });
+        
+        const accretionDisk = new THREE.Mesh(accretionGeometry, accretionMaterial);
+        accretionDisk.rotation.x = Math.PI / 2;
+        quasarGroup.add(accretionDisk);
+        
+        // Jets de partículas con tonos azules
+        const createJet = (direction) => {
+          const jetGroup = new THREE.Group();
+          
+          for (let i = 0; i < 25; i++) {
+            const length = 5 + Math.random() * 10;
+            const jetGeometry = new THREE.ConeGeometry(0.5, length, 8);
+            jetGeometry.rotateX(Math.PI / 2);
+            
+            const jetMaterial = new THREE.MeshBasicMaterial({
+              color: 0x88ccff, // Azul claro
+              transparent: true,
+              opacity: 0.8  // Más brillo
+            });
+            
+            const jetPiece = new THREE.Mesh(jetGeometry, jetMaterial);
+            
+            const pos = i * 8;
+            jetPiece.position.set(
+              direction === 'left' ? -pos : pos,
+              (Math.random() - 0.5) * 3,
+              (Math.random() - 0.5) * 3
+            );
+            
+            jetPiece.userData = {
+              speed: 0.5 + Math.random() * 0.5
+            };
+            
+            jetGroup.add(jetPiece);
+          }
+          
+          quasarGroup.add(jetGroup);
+          return jetGroup;
+        };
+        
+        const leftJet = createJet('left');
+        const rightJet = createJet('right');
+        
+        // Partículas de energía con tonos pastel
+        for (let i = 0; i < 40; i++) {
+          const particleSize = 1 + Math.random() * 3;
+          const particleGeometry = new THREE.SphereGeometry(particleSize, 8, 8);
+          const particleMaterial = new THREE.MeshBasicMaterial({
+            color: new THREE.Color(Math.random() * 0.5 + 0.5, Math.random() * 0.5 + 0.5, 1.0),
+            transparent: true,
+            opacity: 0.7  // Más brillo
+          });
+          
+          const particle = new THREE.Mesh(particleGeometry, particleMaterial);
+          
+          const distance = 25 + Math.random() * 40;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos((Math.random() * 2) - 1);
+          
+          particle.position.set(
+            distance * Math.sin(phi) * Math.cos(theta),
+            distance * Math.sin(phi) * Math.sin(theta),
+            distance * Math.cos(phi)
+          );
+          
+          particle.userData = {
+            speed: 0.1 + Math.random() * 0.2
+          };
+          
+          quasarGroup.add(particle);
+        }
+        
+        scene.add(quasarGroup);
+        return { group: quasarGroup, leftJet, rightJet };
+      };
+
+      const quasar = createQuasar();
+
+      // Cinturón de asteroides con más brillo
+      const createAsteroidBelt = () => {
+        const asteroidBelt = new THREE.Group();
+        const asteroidCount = 400; // Más asteroides
+        
+        for (let i = 0; i < asteroidCount; i++) {
+          const size = 0.5 + Math.random() * 3;
+          const asteroidGeometry = new THREE.SphereGeometry(size, 6, 6);
+          
+          const positionAttribute = asteroidGeometry.getAttribute('position');
+          for (let j = 0; j < positionAttribute.count; j++) {
+            positionAttribute.setXYZ(
+              j,
+              positionAttribute.getX(j) * (0.8 + Math.random() * 0.4),
+              positionAttribute.getY(j) * (0.8 + Math.random() * 0.4),
+              positionAttribute.getZ(j) * (0.8 + Math.random() * 0.4)
+            );
+          }
+          positionAttribute.needsUpdate = true;
+          
+          const asteroidMaterial = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(0.7 + Math.random() * 0.3, 0.6 + Math.random() * 0.3, 0.5 + Math.random() * 0.3), // Más brillo
+            roughness: 0.7, // Más brillo
+            metalness: 0.3  // Más reflectivo
+          });
+          
+          const asteroid = new THREE.Mesh(asteroidGeometry, asteroidMaterial);
+          
+          const radius = 650 + Math.random() * 100;
+          const angle = Math.random() * Math.PI * 2;
+          const height = (Math.random() - 0.5) * 30;
+          
+          asteroid.position.set(
+            Math.cos(angle) * radius,
+            height,
+            Math.sin(angle) * radius
+          );
+          
+          asteroid.userData = {
+            rotationSpeed: (Math.random() - 0.5) * 0.01,
+            orbitSpeed: (0.002 + Math.random() * 0.002) * (Math.random() > 0.5 ? 1 : -1)
+          };
+          
+          asteroidBelt.add(asteroid);
+        }
+        
+        scene.add(asteroidBelt);
+        return asteroidBelt;
+      };
+
+      const asteroidBelt = createAsteroidBelt();
+
+      // Nebulosas en tonos rosa y violeta - más brillantes y femeninas
+      const createNebulas = () => {
+        const nebulas = [];
+        const nebulaCount = 6; // Más nebulosas
+        
+        for (let i = 0; i < nebulaCount; i++) {
+          const size = 80 + Math.random() * 80;
+          const nebulaGeometry = new THREE.SphereGeometry(size, 32, 32);
+          
+          // Crear material con color aleatorio entre rosa y violeta
+          const color = new THREE.Color();
+          if (Math.random() > 0.5) {
+            color.setRGB(0.9 + Math.random() * 0.1, 0.5 + Math.random() * 0.2, 0.7 + Math.random() * 0.3); // Rosas más brillantes
+          } else {
+            color.setRGB(0.8 + Math.random() * 0.2, 0.4 + Math.random() * 0.2, 0.9 + Math.random() * 0.1); // Violetas más brillantes
+          }
+          
+          const nebulaMaterial = new THREE.MeshBasicMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.25 + Math.random() * 0.1,  // Más brillo
+            side: THREE.DoubleSide,
+            wireframe: false
+          });
+          
+          const nebula = new THREE.Mesh(nebulaGeometry, nebulaMaterial);
+          
+          // Posición aleatoria
+          nebula.position.set(
+            Math.random() * 2000 - 1000,
+            Math.random() * 1000 - 500,
+            Math.random() * 2000 - 1000
+          );
+          
+          nebula.userData = {
+            rotationSpeed: (Math.random() - 0.5) * 0.001
+          };
+          
+          scene.add(nebula);
+          nebulas.push(nebula);
+        }
+        
+        return nebulas;
+      };
+
+      const nebulas = createNebulas();
+
+      // Galaxias espirales en el fondo - más brillantes
+      const createBackgroundGalaxies = () => {
+        const galaxies = [];
+        const galaxyCount = 5; // Más galaxias
+        
+        for (let i = 0; i < galaxyCount; i++) {
+          const size = 60 + Math.random() * 50;
+          const galaxyGeometry = new THREE.RingGeometry(size * 0.7, size, 64);
+          
+          const galaxyMaterial = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.35 + Math.random() * 0.1  // Más brillo
+          });
+          
+          const galaxy = new THREE.Mesh(galaxyGeometry, galaxyMaterial);
+          
+          // Posicionar en el fondo
+          galaxy.position.set(
+            Math.random() * 2500 - 1250,
+            Math.random() * 1200 - 600,
+            -1200 - Math.random() * 300
+          );
+          
+          // Rotación aleatoria
+          galaxy.rotation.x = Math.random() * Math.PI;
+          galaxy.rotation.y = Math.random() * Math.PI;
+          galaxy.rotation.z = Math.random() * Math.PI;
+          
+          galaxy.userData = {
+            rotationSpeed: (Math.random() - 0.5) * 0.0005
+          };
+          
+          scene.add(galaxy);
+          galaxies.push(galaxy);
+        }
+        
+        return galaxies;
+      };
+
+      const backgroundGalaxies = createBackgroundGalaxies();
+
+      // Partículas mágicas alrededor de planetas y constelación - más brillo
+      const createMagicParticles = () => {
+        const particlesGeometry = new THREE.BufferGeometry();
+        const particleCount = 1000; // Más partículas
+        const positions = new Float32Array(particleCount * 3);
+        const colors = new Float32Array(particleCount * 3);
+        const sizes = new Float32Array(particleCount);
+        const alphas = new Float32Array(particleCount);
+        
+        const color = new THREE.Color();
+        
+        for (let i = 0; i < particleCount; i++) {
+          const i3 = i * 3;
+          
+          // Agrupar partículas alrededor de planetas y constelación
+          let center;
+          if (i % 3 === 0 && romanticPlanets.length > 0) {
+            // Alrededor de planetas románticos
+            const planet = romanticPlanets[Math.floor(Math.random() * romanticPlanets.length)];
+            center = planet.planet.position.clone();
+            center.applyMatrix4(planet.planet.matrixWorld);
+            color.set(planet.planet.material.color);
+          } else if (i % 3 === 1) {
+            // Alrededor del corazón
+            center = heartConstellation.group.position.clone();
+            color.setRGB(1, 0.7, 0.9); // Rosa más brillante
+          } else {
+            // Aleatorias en el espacio
+            center = new THREE.Vector3(
+              Math.random() * 2000 - 1000,
+              Math.random() * 1000 - 500,
+              Math.random() * 2000 - 1000
+            );
+            color.setRGB(0.9, 0.9, 1); // Azul claro más brillante
+          }
+          
+          // Radio aleatorio alrededor del centro
+          const radius = 15 + Math.random() * 25;
+          const theta = Math.random() * Math.PI * 2;
+          const phi = Math.acos((Math.random() * 2) - 1);
+          
+          positions[i3] = center.x + radius * Math.sin(phi) * Math.cos(theta);
+          positions[i3 + 1] = center.y + radius * Math.sin(phi) * Math.sin(theta);
+          positions[i3 + 2] = center.z + radius * Math.cos(phi);
+          
+          colors[i3] = color.r;
+          colors[i3 + 1] = color.g;
+          colors[i3 + 2] = color.b;
+          
+          sizes[i] = 1.0 + Math.random() * 2.0; // Más grandes
+          alphas[i] = Math.random();
+        }
+        
+        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+        particlesGeometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+        particlesGeometry.setAttribute('alpha', new THREE.BufferAttribute(alphas, 1));
+        
+        const particlesMaterial = new THREE.PointsMaterial({
+          size: 3.0, // Más grandes
+          sizeAttenuation: true,
+          vertexColors: true,
+          transparent: true
+        });
+        
+        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+        scene.add(particles);
+        
+        return { particles, alphas };
+      };
+
+      const magicParticles = createMagicParticles();
+
+      // Mensajes románticos flotantes - más femeninos
+      const romanticTexts = [
+        "Cada estrella me recuerda a ti",
+        "Eres mi perdona favorita",
+        "Te amo mas de lo que digo",
+        "Te extaño muchisimo. :(",
+        "Eres la luz en mi oscuridad",
+        "Mi corazón late al ritmo de las estrellas",
+        "Eres mi galaxia, mi mundo. ",
+        "El espacio entre nosotros pronto desaparecerá",
+        "Eres el sol que ilumina mi vida",
+        "Dejame volver. ",
+        "Eres mi destino escrito en las estrellas",
+        "Cada planeta canta tu nombre",
+        "Tu amor es mi fuerza, mi vida",
+        "Eres la supernova que iluminó mi existencia",
+        "Deja que Nuestro amor trasciende el tiempo y el espacio",
+        "Eres mi fenómeno celestial favorito",
+				"te extraño demasiado",
+				"Eres el amor de mi vida",
+				"Eres la mujer de mi vida",
+				"Quiero todo contigo",
+				"Por favor, perdoname."
+      ];
+
+      const createFloatingMessages = () => {
+        const messages = [];
+        
+        romanticTexts.forEach((text, i) => {
+          const messageElement = document.createElement('div');
+          messageElement.className = 'romantic-message';
+          messageElement.textContent = text;
+          messageElement.style.color = i % 2 === 0 ? '#ff9ee0' : '#c6a8ff'; // Alternar colores
+          document.body.appendChild(messageElement);
+          
+          messages.push({
+            element: messageElement,
+            position: new THREE.Vector3(
+              Math.random() * 1000 - 500,
+              Math.random() * 500 - 250,
+              Math.random() * 1000 - 500
+            ),
+            visible: false,
+            showTime: 5000 + Math.random() * 10000,
+            hideTime: 3000 + Math.random() * 5000,
+            timer: 0,
+            state: 'waiting' // waiting, showing, visible, hiding
+          });
+        });
+        
+        return messages;
+      };
+
+      const floatingMessages = createFloatingMessages();
+
+      // Partículas de amor flotantes - más brillo y variedad
+      const createLoveParticles = () => {
+        const loveParticles = [];
+        const particleCount = 25; // Más partículas
+        const symbols = ['💖', '🩵', '💜', '💗', '💘', '💝', '💞', '✨', '🌟', '⭐', '🌙', '🌺', '🌸', '🌷', '🌹'];
+        
+        for (let i = 0; i < particleCount; i++) {
+          const particleElement = document.createElement('div');
+          particleElement.className = 'love-particle';
+          particleElement.textContent = symbols[Math.floor(Math.random() * symbols.length)];
+          particleElement.style.color = `hsl(${Math.random() * 360}, 100%, 80%)`; // Más brillo
+          particleElement.style.fontSize = `${20 + Math.random() * 10}px`; // Tamaño variable
+          document.body.appendChild(particleElement);
+          
+          loveParticles.push({
+            element: particleElement,
+            position: new THREE.Vector3(
+              Math.random() * 1000 - 500,
+              Math.random() * 500 - 250,
+              Math.random() * 1000 - 500
+            ),
+            speed: 0.2 + Math.random() * 0.3,
+            amplitude: 10 + Math.random() * 20,
+            offset: Math.random() * Math.PI * 2
+          });
+        }
+        
+        return loveParticles;
+      };
+
+      const loveParticles = createLoveParticles();
+
+      // Grupos de estrellas fugaces con trayectorias curvas - más brillo
+      const createMeteorShowers = () => {
+        const meteors = [];
+        const showerCount = 8; // Más grupos
+        
+        for (let s = 0; s < showerCount; s++) {
+          const meteorCount = 5 + Math.floor(Math.random() * 6);
+          
+          for (let i = 0; i < meteorCount; i++) {
+            const length = 8 + Math.random() * 15;
+            const meteorGeometry = new THREE.CylinderGeometry(0.2, 1.2, length, 8);
+            meteorGeometry.rotateZ(Math.PI / 2);
+            
+            const meteorMaterial = new THREE.MeshBasicMaterial({
+              color: new THREE.Color(0.8 + Math.random() * 0.2, 0.8 + Math.random() * 0.2, 1.0), // Más brillo
+              transparent: true,
+              opacity: 0.9 // Más brillo
+            });
+            
+            const meteor = new THREE.Mesh(meteorGeometry, meteorMaterial);
+            
+            const groupCenter = new THREE.Vector3(
+              Math.random() * 1500 - 750,
+              Math.random() * 800 - 400,
+              Math.random() * 1500 - 750
+            );
+            
+            const spread = 100;
+            meteor.position.set(
+              groupCenter.x + (Math.random() - 0.5) * spread,
+              groupCenter.y + (Math.random() - 0.5) * spread,
+              groupCenter.z + (Math.random() - 0.5) * spread
+            );
+            
+            const baseDirection = new THREE.Vector3(
+              Math.random() - 0.5,
+              (Math.random() - 0.8) * 0.5, // Más hacia abajo
+              Math.random() - 0.5
+            ).normalize();
+            
+            const variation = 0.3;
+            const direction = new THREE.Vector3(
+              baseDirection.x + (Math.random() - 0.5) * variation,
+              baseDirection.y + (Math.random() - 0.5) * variation,
+              baseDirection.z + (Math.random() - 0.5) * variation
+            ).normalize();
+            
+            // Curvatura de la trayectoria
+            const curveAmount = 0.01 + Math.random() * 0.02;
+            const curveAxis = new THREE.Vector3(
+              Math.random() - 0.5,
+              Math.random() - 0.5,
+              Math.random() - 0.5
+            ).normalize();
+            
+            meteor.userData = {
+              velocity: direction.multiplyScalar(25 + Math.random() * 15),
+              curveAmount: curveAmount,
+              curveAxis: curveAxis,
+              life: 150 + Math.random() * 100,
+              group: s
+            };
+            
+            scene.add(meteor);
+            meteors.push(meteor);
+          }
+        }
+        
+        return meteors;
+      };
+
+      const meteors = createMeteorShowers();
+
+      // Actualizar indicador de distancia
+      function updateDistanceIndicator() {
+        const distance = camera.position.length();
+        let text = "Distancia: ";
+        
+        if (distance < 200) text += "Cerca";
+        else if (distance < 600) text += "Media";
+        else if (distance < 1000) text += "Lejos";
+        else text += "Muy Lejos";
+        
+        document.getElementById('distanceIndicator').textContent = text;
+      }
+
+      // Actualizar posición de mensajes de planetas en la pantalla
+      function updatePlanetMessages() {
+        romanticPlanets.forEach(planet => {
+          if (planet.messageElement) {
+            const planetPosition = new THREE.Vector3();
+            planet.planet.getWorldPosition(planetPosition);
+            
+            // Convertir coordenadas 3D a 2D en la pantalla
+            planetPosition.project(camera);
+            
+            const x = (planetPosition.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-planetPosition.y * 0.5 + 0.5) * window.innerHeight;
+            
+            // Solo mostrar si el planeta está frente a la cámara
+            if (planetPosition.z < 1) {
+              planet.messageElement.style.left = `${x}px`;
+              planet.messageElement.style.top = `${y}px`;
+              planet.messageElement.style.opacity = '0.9';
+            } else {
+              planet.messageElement.style.opacity = '0';
+            }
+          }
+        });
+      }
+
+      // Actualizar partículas de amor
+      function updateLoveParticles(delta) {
+        loveParticles.forEach(particle => {
+          const screenPosition = particle.position.clone();
+          screenPosition.project(camera);
+          
+          const x = (screenPosition.x * 0.5 + 0.5) * window.innerWidth;
+          const y = (-screenPosition.y * 0.5 + 0.5) * window.innerHeight;
+          
+          // Movimiento flotante
+          const floatOffset = Math.sin(Date.now() * 0.001 * particle.speed + particle.offset) * particle.amplitude;
+          
+          particle.element.style.left = `${x}px`;
+          particle.element.style.top = `${y + floatOffset}px`;
+          particle.element.style.opacity = '0.9';
+          
+          // Efecto de parpadeo
+          particle.element.style.opacity = (0.7 + 0.3 * Math.sin(Date.now() * 0.002)).toString();
+        });
+      }
+
+      // Actualizar mensajes flotantes
+      function updateFloatingMessages(delta) {
+        floatingMessages.forEach(message => {
+          message.timer += delta;
+          
+          switch (message.state) {
+            case 'waiting':
+              if (message.timer > message.showTime) {
+                message.state = 'showing';
+                message.timer = 0;
+                message.element.style.opacity = '0';
+                
+                // Actualizar posición
+                const screenPosition = message.position.clone();
+                screenPosition.project(camera);
+                
+                message.element.style.left = `${(screenPosition.x * 0.5 + 0.5) * window.innerWidth}px`;
+                message.element.style.top = `${(-screenPosition.y * 0.5 + 0.5) * window.innerHeight}px`;
+              }
+              break;
+              
+            case 'showing':
+              message.element.style.opacity = Math.min(1, message.timer / 1000).toString();
+              if (message.timer > 1000) {
+                message.state = 'visible';
+                message.timer = 0;
+              }
+              break;
+              
+            case 'visible':
+              if (message.timer > message.hideTime) {
+                message.state = 'hiding';
+                message.timer = 0;
+              }
+              break;
+              
+            case 'hiding':
+              message.element.style.opacity = Math.max(0, 1 - message.timer / 1000).toString();
+              if (message.timer > 1000) {
+                message.state = 'waiting';
+                message.timer = 0;
+                
+                // Nueva posición aleatoria
+                message.position.set(
+                  Math.random() * 1000 - 500,
+                  Math.random() * 500 - 250,
+                  Math.random() * 1000 - 500
+                );
+                
+                // Nuevos tiempos
+                message.showTime = 5000 + Math.random() * 10000;
+                message.hideTime = 3000 + Math.random() * 5000;
+              }
+              break;
+          }
+        });
+      }
+
+      // Animación
+      let clock = new THREE.Clock();
+      
+      function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta() * 1000; // delta en milisegundos
+
+        // Limitar la cámara para evitar temblores
+        limitarCamara();
+
+        // Rotación del sol
+        sun.rotation.y += 0.002;
+
+        // Rotación de planetas
+        planetas.forEach(p => {
+          p.pivot.rotation.y += p.speed;
+          p.planet.rotation.y += 0.005;
+        });
+        
+        // Rotación de planetas románticos
+        romanticPlanets.forEach(p => {
+          p.pivot.rotation.y += p.speed;
+          p.planet.rotation.y += 0.005;
+        });
+
+        // Animación de quásar
+        quasar.group.rotation.y += 0.004;
+        
+        // Animación de jets del quásar
+        quasar.leftJet.children.forEach(jet => {
+          jet.position.x -= jet.userData.speed;
+          if (jet.position.x < -200) {
+            jet.position.x = 0;
+          }
+        });
+        
+        quasar.rightJet.children.forEach(jet => {
+          jet.position.x += jet.userData.speed;
+          if (jet.position.x > 200) {
+            jet.position.x = 0;
+          }
+        });
+        
+        quasar.group.children.forEach(child => {
+          if (child.userData && child.userData.speed) {
+            const distance = child.position.length();
+            const direction = child.position.clone().normalize();
+            child.position.add(direction.multiplyScalar(child.userData.speed));
+            
+            if (child.position.length() > 70) {
+              child.position.set(
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10,
+                (Math.random() - 0.5) * 10
+              ).normalize().multiplyScalar(25 + Math.random() * 10);
+            }
+          }
+        });
+
+        // Animación de asteroides
+        asteroidBelt.children.forEach(asteroid => {
+          asteroid.rotation.x += asteroid.userData.rotationSpeed;
+          asteroid.rotation.y += asteroid.userData.rotationSpeed * 0.7;
+          asteroid.rotation.z += asteroid.userData.rotationSpeed * 0.3;
+          
+          const angle = Math.atan2(asteroid.position.z, asteroid.position.x);
+          const newAngle = angle + asteroid.userData.orbitSpeed;
+          const radius = Math.sqrt(asteroid.position.x * asteroid.position.x + asteroid.position.z * asteroid.position.z);
+          
+          asteroid.position.x = Math.cos(newAngle) * radius;
+          asteroid.position.z = Math.sin(newAngle) * radius;
+        });
+
+        // Animación de estrellas fugaces
+        meteors.forEach(meteor => {
+          // Aplicar velocidad
+          meteor.position.add(meteor.userData.velocity.clone().multiplyScalar(0.4));
+          
+          // Aplicar curvatura a la trayectoria
+          const curve = meteor.userData.curveAxis.clone().multiplyScalar(meteor.userData.curveAmount);
+          meteor.userData.velocity.add(curve);
+          meteor.userData.velocity.normalize();
+          
+          meteor.userData.life--;
+          
+          if (meteor.userData.life <= 0) {
+            const groupCenter = new THREE.Vector3(
+              Math.random() * 1500 - 750,
+              Math.random() * 800 - 400,
+              Math.random() * 1500 - 750
+            );
+            
+            const spread = 100;
+            meteor.position.set(
+              groupCenter.x + (Math.random() - 0.5) * spread,
+              groupCenter.y + (Math.random() - 0.5) * spread,
+              groupCenter.z + (Math.random() - 0.5) * spread
+            );
+            
+            // Nueva dirección
+            const baseDirection = new THREE.Vector3(
+              Math.random() - 0.5,
+              (Math.random() - 0.8) * 0.5,
+              Math.random() - 0.5
+            ).normalize();
+            
+            const variation = 0.3;
+            const direction = new THREE.Vector3(
+              baseDirection.x + (Math.random() - 0.5) * variation,
+              baseDirection.y + (Math.random() - 0.5) * variation,
+              baseDirection.z + (Math.random() - 0.5) * variation
+            ).normalize();
+            
+            meteor.userData.velocity = direction.multiplyScalar(25 + Math.random() * 15);
+            meteor.userData.life = 150 + Math.random() * 100;
+          }
+          
+          // Efecto de parpadeo
+          meteor.material.opacity = 0.6 + 0.4 * Math.sin(Date.now() * 0.01 + meteor.userData.group);
+        });
+
+        // Animación de nebulosas
+        nebulas.forEach(nebula => {
+          nebula.rotation.x += nebula.userData.rotationSpeed;
+          nebula.rotation.y += nebula.userData.rotationSpeed * 1.3;
+          nebula.rotation.z += nebula.userData.rotationSpeed * 0.7;
+        });
+
+        // Animación de galaxias de fondo
+        backgroundGalaxies.forEach(galaxy => {
+          galaxy.rotation.z += galaxy.userData.rotationSpeed;
+        });
+
+        // Animación de partículas mágicas
+        if (magicParticles.alphas) {
+          for (let i = 0; i < magicParticles.alphas.length; i++) {
+            magicParticles.alphas[i] = 0.3 + 0.7 * Math.sin(Date.now() * 0.001 + i * 0.1);
+          }
+          magicParticles.particles.geometry.attributes.alpha.needsUpdate = true;
+        }
+
+        // Animación de constelación del corazón
+        if (heartConstellation.alphas) {
+          for (let i = 0; i < heartConstellation.alphas.length; i++) {
+            heartConstellation.alphas[i] = 0.5 + 0.5 * Math.sin(Date.now() * 0.002 + i * 0.2);
+          }
+          heartConstellation.stars.geometry.attributes.alpha.needsUpdate = true;
+          
+          // Rotar la constelación lentamente
+          heartConstellation.group.rotation.z += 0.0005;
+        }
+
+        // Actualizar indicador de distancia
+        updateDistanceIndicator();
+        
+        // Actualizar mensajes de planetas
+        updatePlanetMessages();
+        
+        // Actualizar partículas de amor
+        updateLoveParticles(delta);
+        
+        // Actualizar mensajes flotantes
+        updateFloatingMessages(delta);
+
+        controls.update();
+        renderer.render(scene, camera);
+				
+				// dentro de animate()
+heartConstellation.stars.material.opacity =
+  0.5 + 0.5 * Math.sin(Date.now() * 0.003);
+
+magicParticles.particles.material.opacity =
+  0.3 + 0.7 * Math.sin(Date.now() * 0.002);
+      }
+      animate();
+
+      // Resize handler
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      // Detectar si es móvil y ajustar parámetros
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        // Ajustes específicos para móviles
+        controls.minDistance = 80;
+        controls.maxDistance = 1000;
+        camera.position.set(0, 150, 400);
+      }
+   
+  </script>
+</body>
+</html>
